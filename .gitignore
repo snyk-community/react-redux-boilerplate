@@ -1,0 +1,9 @@
+.idea
+node_modules
+public/build
+
+webpack-assets.json
+webpack-stats.json
+*.log
+.gitmodules
+configs/development.json

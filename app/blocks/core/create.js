@@ -1,13 +1,14 @@
 import { createStore as _createStore, applyMiddleware, compose } from 'redux';
-import transitionMiddleware from './middleware/transitionMiddleware';
+import { syncHistory } from 'react-router-redux';
 import thunk from 'redux-thunk';
 
-export default function createStore(reduxReactRouter, getRoutes, createHistory, data) {
+export default function createStore(history, data) {
+    const reduxRouterMiddleware = syncHistory(history);
     const middleware = [
         thunk,
-        transitionMiddleware
+        reduxRouterMiddleware
     ];
-    let finalCreateStore;
+    let createStoreWithMiddleware;
     if (__CLIENT__ && __DEVELOPMENT__) {
         const createLogger = require('redux-logger');
         const logger = createLogger({
@@ -15,29 +16,23 @@ export default function createStore(reduxReactRouter, getRoutes, createHistory, 
         });
         middleware.push(logger);
     }
-    if (__SERVER__) {
-        finalCreateStore = compose(
-            reduxReactRouter({ getRoutes, createHistory }),
-            applyMiddleware(...middleware)
-        )(_createStore);
-    } else if (__CLIENT__ && __DEVTOOLS__) {
+    if (__CLIENT__ && __DEVTOOLS__) {
         const { persistState } = require('redux-devtools');
         const DevTools = require('./../dev-tools/dev-tools.view');
-        finalCreateStore = compose(
+        createStoreWithMiddleware = compose(
             applyMiddleware(...middleware, logger),
-            reduxReactRouter({ getRoutes, createHistory }),
             window.devToolsExtension ? window.devToolsExtension() : DevTools.instrument(),
             persistState(window.location.href.match(/[?&]debug_session=([^&]+)\b/))
         )(_createStore);
-    } else if (__CLIENT__) {
-        finalCreateStore = compose(
-            applyMiddleware(...middleware),
-            reduxReactRouter({ getRoutes, createHistory })
-        )(_createStore);
+    } else {
+        createStoreWithMiddleware = applyMiddleware(...middleware)(_createStore);
     }
 
-    const reducers = require('./../../reducers').default;
-    const store = finalCreateStore(reducers, data);
+    const reducers = require('../../reducers').default;
+    const store = createStoreWithMiddleware(reducers, data);
+
+    // TODO: why this not working? O.o  
+    //reduxRouterMiddleware.listenForReplays(store);
 
     if (__DEVELOPMENT__ && module.hot) {
         module.hot.accept('./../../reducers', () => {

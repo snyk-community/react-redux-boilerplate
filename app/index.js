@@ -1,23 +1,27 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import createHistory from 'history/lib/createBrowserHistory';
 import createStore from './blocks/core/create';
 import { Provider } from 'react-redux';
-import { reduxReactRouter, ReduxRouter } from 'redux-router';
+import { Router, browserHistory } from 'react-router';
+import { ReduxAsyncConnect } from 'redux-async-connect';
 import getRoutes from './routes';
-import makeRouteHooksSafe from './blocks/core/helpers/makeRouteHooksSafe';
 import Core from './blocks/core/core.view';
 import config from '../configs/config';
-
+import useScroll from 'scroll-behavior/lib/useStandardScroll';
 import logger from '../app/blocks/log/log';
 
 let log = logger('clientRender');
 
-const store = createStore(reduxReactRouter, makeRouteHooksSafe(getRoutes), createHistory, window.__data);
+const history = useScroll(() => browserHistory)();
+const store = createStore(browserHistory, window.__data);
 
 let mountNode = document.getElementById('app');
 const component = (
-    <ReduxRouter routes={getRoutes(store)} />
+    <Router render={(props) =>
+                <ReduxAsyncConnect {...props} filter={item => !item.deferred} />
+              } history={history}>
+        {getRoutes(store)}
+    </Router>
 );
 ReactDOM.render(
     <Core>

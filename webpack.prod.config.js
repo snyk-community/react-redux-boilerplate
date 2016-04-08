@@ -2,8 +2,23 @@ var webpack   = require('webpack');
 var config = require('./webpack.base.config').config;
 var deepmerge = require('./webpack.base.config').deepmerge;
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
+// https://github.com/webpack/webpack/issues/1315
+var WebpackMd5Hash = require('webpack-md5-hash');
 
 module.exports = deepmerge(config, {
+    entry: {
+        vendors: [
+            'react',
+            'react-dom',
+            'react-router',
+            'react-router-redux',
+            'react-redux',
+            'redux',
+            'redux-thunk',
+            'redux-async-connect',
+            'scroll-behavior'
+        ]
+    },
     output: {
         publicPath: '/build/'
     },
@@ -14,7 +29,8 @@ module.exports = deepmerge(config, {
                 include: [__dirname + '/app', __dirname + '/configs'],
                 loader: 'babel-loader',
                 query: {
-                    "presets": ['react', 'es2015', 'stage-2']
+                    "presets": ['react', 'es2015', 'stage-1'],
+                    "plugins": ['babel-plugin-transform-decorators-legacy']
                 }
             },
             {
@@ -22,7 +38,8 @@ module.exports = deepmerge(config, {
                 include: [__dirname + '/node_modules'],
                 loader: 'babel-loader',
                 query: {
-                    "presets": ['react', 'es2015', 'stage-2']
+                    "presets": ['react', 'es2015', 'stage-1'],
+                    "plugins": ['babel-plugin-transform-decorators-legacy']
                 }
             },
             {
@@ -38,7 +55,9 @@ module.exports = deepmerge(config, {
         ]
     },
     plugins: [
-        new ExtractTextPlugin('[name]-[chunkhash].css', {allChunks: true}),
+        new WebpackMd5Hash(),
+        new ExtractTextPlugin('[name]-[contenthash].css', {allChunks: true}),
+        new webpack.optimize.CommonsChunkPlugin('vendors', '[name]-[chunkhash].js'),
         new webpack.DefinePlugin({
             __CLIENT__: true,
             __SERVER__: false,

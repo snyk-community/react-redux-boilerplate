@@ -2,7 +2,8 @@ import React from 'react';
 
 class Html extends React.Component {
     render() {
-        let style = (process.env.NODE_ENV === 'production') ? (<link rel="stylesheet" href={this.props.assets.styles.main}/>) : null;
+        const style = (process.env.NODE_ENV === 'production') ? (<link rel="stylesheet" href={this.props.assets.styles.main}/>) : null;
+        const vendors = (process.env.NODE_ENV === 'production') ? (<script src={this.props.assets.javascript.vendors} defer></script>) : null;
         let noScript = (process.env.NODE_ENV === 'development') ? (
             <noscript>
                 <div style={{
@@ -31,6 +32,7 @@ class Html extends React.Component {
                     {noScript}
                     <div id="app" dangerouslySetInnerHTML={{__html: this.props.markup}}></div>
                     <script dangerouslySetInnerHTML={{__html: this.props.state}}></script>
+                    {vendors}
                     <script src={this.props.assets.javascript.main} defer></script>
                 </body>
             </html>

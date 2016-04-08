@@ -30,7 +30,7 @@ module.exports = deepmerge(webpackConfig, {
                 include: [__dirname + '/app', __dirname + '/configs'],
                 loader: 'babel-loader',
                 query: {
-                    "presets": ['react', 'es2015', 'stage-2', 'react-hmre'],
+                    "presets": ['react', 'es2015', 'stage-1', 'react-hmre'],
                     "plugins": [
                         // must be an array with options object as second item
                         ["react-transform", {
@@ -58,8 +58,8 @@ module.exports = deepmerge(webpackConfig, {
                 include: includePath,
                 loader: 'babel-loader',
                 query: {
-                    "presets": ['react', 'es2015', 'stage-2'],
-                    plugins: ["transform-runtime"]
+                    presets: ['react', 'es2015', 'stage-1'],
+                    plugins: ['transform-runtime', 'babel-plugin-transform-decorators-legacy']
                 }
             },
             {

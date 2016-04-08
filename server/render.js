@@ -4,16 +4,13 @@ import serialize from 'serialize-javascript';
 import HtmlComponent from '../app/pages/html/html.view';
 import logger from '../app/blocks/log/log';
 import Core from '../app/blocks/core/core.view';
-
 import PrettyError from 'pretty-error';
 import createStore from '../app/blocks/core/create';
-import { ReduxRouter } from 'redux-router';
-import createHistory from 'history/lib/createMemoryHistory';
-import { reduxReactRouter, match } from 'redux-router/server';
-import { Provider } from 'react-redux';
-import qs from 'query-string';
 import getRoutes from '../app/routes';
-import getStatusFromRoutes from '../app/blocks/core/helpers/getStatusFromRoutes';
+import { match } from 'react-router';
+import createHistory from 'react-router/lib/createMemoryHistory';
+import { ReduxAsyncConnect, loadOnServer } from 'redux-async-connect';
+import { Provider } from 'react-redux';
 
 const pretty = new PrettyError();
 let log = logger('serverRender');
@@ -24,7 +21,8 @@ export default function(req, res, next) {
         webpackIsomorphicTools.refresh();
     }
 
-    const store = createStore(reduxReactRouter, getRoutes, createHistory);
+    const history = createHistory(req.url);
+    const store = createStore(history);
 
     function hydrateOnClient() {
         log.debug('Exposing context state');
@@ -40,54 +38,59 @@ export default function(req, res, next) {
         res.send('<!DOCTYPE html>' + html);
     }
 
-    log.debug('Executing navigate action');
-    store.dispatch(match(req.originalUrl, (error, redirectLocation, routerState) => {
-            if (redirectLocation) {
-                res.redirect(redirectLocation.pathname + redirectLocation.search);
-            } else if (error) {
-                log.error('ROUTER ERROR:', pretty.render(error));
-                res.status(500);
-                hydrateOnClient();
-            } else if (!routerState) {
-                res.status(500);
-                hydrateOnClient();
-            } else {
-                // Workaround redux-router query string issue:
-                // https://github.com/rackt/redux-router/issues/106
-                if (routerState.location.search && !routerState.location.query) {
-                    routerState.location.query = qs.parse(routerState.location.search);
-                }
+    function getHttpStatusCode(props) {
+        var statusCode = 200;
 
-                store.getState().router.then(() => {
-                    const component = (
-                        <Core>
-                            <Provider store={store} key="provider">
-                                <ReduxRouter/>
-                            </Provider>
-                        </Core>
-                    );
-
-                    const status = getStatusFromRoutes(routerState.routes);
-                    if (status) {
-                        res.status(status);
-                    }
-
-                    log.debug('Exposing context state');
-                    let exposed = 'window.__data=' + serialize(store.getState()) + ';';
-
-                    log.debug('Rendering Application component into html');
-                    let html = ReactDOM.renderToStaticMarkup(HtmlComponent({
-                        state: exposed,
-                        markup: ReactDOM.renderToString(component),
-                        assets: webpackIsomorphicTools.assets()
-                    }));
-                    log.debug('Sending markup');
-                    res.send('<!DOCTYPE html>' + html);
-                }).catch((err) => {
-                    log.error('DATA FETCHING ERROR:', pretty.render(err));
-                    res.status(500);
-                    hydrateOnClient();
-                });
+        /* TODO: check statusCode from Route */
+        for (let route of props.routes) {
+            if (!isNaN(route.status) && route.status !== 200) {
+                statusCode = route.status;
+                break;
             }
-        }));
+        }
+
+        return statusCode;
+    }
+
+    log.debug('Executing navigate action');
+    match({history, routes: getRoutes(store), location: req.url }, (err, redirect, props) => {
+        // in here we can make some decisions all at once
+        if (err) {
+            // there was an error somewhere during route matching
+            res.status(500).send(err.message)
+        } else if (redirect) {
+            // we haven't talked about `onEnter` hooks on routes, but before a
+            // route is entered, it can redirect. Here we handle on the server.
+            res.redirect(redirect.pathname + redirect.search)
+        } else if (props) {
+            // if we got props then we matched a route and can render
+            loadOnServer({...props, store}).then(() => {
+
+                res.status(getHttpStatusCode(props));
+
+                const component = (
+                    <Core>
+                        <Provider store={store} key="provider">
+                            <ReduxAsyncConnect {...props} />
+                        </Provider>
+                    </Core>
+                );
+
+                log.debug('Exposing context state');
+                let exposed = 'window.__data=' + serialize(store.getState()) + ';';
+
+                log.debug('Rendering Application component into html');
+                let html = ReactDOM.renderToStaticMarkup(HtmlComponent({
+                    state: exposed,
+                    markup: ReactDOM.renderToString(component),
+                    assets: webpackIsomorphicTools.assets()
+                }));
+                log.debug('Sending markup');
+                res.send('<!DOCTYPE html>' + html);
+            }).catch((e) => log.error(pretty.render(e)));
+        } else {
+            // no errors, no redirect, we just didn't match anything
+            res.status(404).send('Not Found')
+        }
+    });
 }

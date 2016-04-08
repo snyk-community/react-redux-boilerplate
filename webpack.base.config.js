@@ -30,7 +30,7 @@ module.exports.config = {
     output: {
         path: __dirname + '/public/build',
         publicPath: '/public/build/',
-        filename: '[name]-[hash].js',
+        filename: '[name]-[chunkhash].js',
         chunkFilename: '[name]-[chunkhash].js'
     },
     resolve: {
@@ -49,7 +49,7 @@ module.exports.config = {
             },
             {
                 test: webpackIsomorphicToolsPlugin.regular_expression('images'),
-                loader: 'url-loader?limit=10240'
+                loader: 'url-loader?limit=10240!img?minimize&optimizationLevel=5&progressive=true'
             },
             {
                 test: /\.json/,

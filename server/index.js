@@ -1,6 +1,7 @@
 require('babel-register')({
     ignore: /(node_modules|modules)\/(?!(lib|booker|core)-ui__)/,
-    presets: ['es2015', 'react', 'stage-2']
+    presets: ['es2015', 'react', 'stage-1'],
+    plugins: ['babel-plugin-transform-decorators-legacy']
 });
 
 var WebpackIsomorphicTools = require('webpack-isomorphic-tools');

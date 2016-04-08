@@ -1,6 +1,8 @@
 import { combineReducers } from 'redux';
-import { routerStateReducer } from 'redux-router';
+import { routeReducer as router } from 'react-router-redux';
+import { reducer as reduxAsyncConnect } from 'redux-async-connect';
 
 export default combineReducers({
-    router: routerStateReducer
+    router,
+    reduxAsyncConnect
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 
-class ApplicationView extends React.Component {
+export default class ApplicationView extends React.Component {
     constructor(props, context) {
         super(props, context);
     }
@@ -12,5 +12,3 @@ class ApplicationView extends React.Component {
         )
     }
 }
-
-export default ApplicationView;
